@@ -1,0 +1,31 @@
+{
+    "name": "guolei19850528/laravel-chanjet",
+    "description": "A Chanjet Laravel Library By Guolei",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Guolei19850528\\Laravel\\Chanjet\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "guolei",
+            "email": "174000902@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": "8.*",
+        "illuminate/support": "7.*||8.*||9.*||10.*||11.*",
+        "mtownsend/xml-to-array": "^2.0",
+        "spatie/array-to-xml": "^3.3"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Guolei19850528\\Laravel\\Chanjet\\ExtensionServiceProvider"
+            ]
+        }
+    }
+}
