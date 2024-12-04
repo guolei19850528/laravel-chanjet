@@ -1,6 +1,11 @@
 {
     "name": "guolei19850528/laravel-chanjet",
     "description": "A Chanjet Laravel Library By Guolei",
+    "keyworkds": [
+        "chanjet",
+        "畅捷通",
+        "u8+"
+    ],
     "type": "library",
     "license": "MIT",
     "autoload": {
