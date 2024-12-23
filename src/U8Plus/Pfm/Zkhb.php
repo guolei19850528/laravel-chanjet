@@ -6,7 +6,7 @@
  * Git:https://github.com/guolei19850528/laravel-chanjet
  */
 
-namespace Guolei19850528\Laravel\Chanjet\U8Plus;
+namespace Guolei19850528\Laravel\Chanjet\U8Plus\Pfm;
 
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -19,7 +19,7 @@ use Spatie\ArrayToXml\ArrayToXml;
 /**
  * U8plus物业收费系统 API
  */
-class ZkhbPFM
+class Zkhb
 {
     /**
      * api url
@@ -32,7 +32,7 @@ class ZkhbPFM
         return $this->url;
     }
 
-    public function setUrl(string $url): ZkhbPFM
+    public function setUrl(string $url): self
     {
         $this->url = $url;
         return $this;
@@ -47,8 +47,10 @@ class ZkhbPFM
     /**
      * @param array $data
      * @param string $filterKey
+     * @param string $url
+     * @param array|Collection|null $urlParameters
      * @param array|Collection|null $options
-     * @param \Closure|null $closure
+     * @param \Closure|null $responseHandler
      * @return array|Collection|null
      */
     public function getDataSet(
@@ -97,8 +99,11 @@ class ZkhbPFM
         }
         if ($response->ok()) {
             $array = XmlToArray::convert($response->body());
-            print_r($array);
-            return \data_get($array, $filterKey, []);
+            $filterArray = \data_get($array, $filterKey, []);
+            if (\str(\data_get($filterArray, 'ChargeMListID', ''))->isNotEmpty()) {
+                return [$filterArray];
+            }
+            return $filterArray;
         }
         return [];
     }
@@ -106,23 +111,25 @@ class ZkhbPFM
 
     /**
      * 按条件查询实际收费列表
-     * @param string $conditions
+     * @param string|null $topColumnString
+     * @param string|null $conditionString
+     * @param string|null $orderBy
      * @param string $filterKey 筛选Key
      * @param array|Collection|null $options Http options
      * @param \Closure|null $responseHandler
      * @return array|Collection|null
      */
-    public function queryActualChargeBillItems(
-        string|null           $top = null,
-        string|null           $conditions = null,
-        string|null           $orderBy = ' order by cfi.ChargeFeeItemID desc',
+    public function queryActualChargeBillItemList(
+        string|null           $topColumnString = null,
+        string|null           $conditionString = null,
+        string|null           $orderByString = ' order by cfi.ChargeFeeItemID desc',
         string                $filterKey = 'soap:Body.GetDataSetResponse.GetDataSetResult.diffgr:diffgram.NewDataSet.Table',
         array|Collection|null $options = [],
         \Closure|null         $responseHandler = null
     ): array|Collection|null
     {
         $sql = \str('select ')->append(
-            $top,
+            $topColumnString,
             \collect([
                 'cml.ChargeMListID',
                 'cml.ChargeMListNo',
@@ -152,7 +159,7 @@ class ZkhbPFM
                 ' left join RoomDetail as rd on cfi.RmId=rd.RmId',
                 ' left join ChargeBillItem as cbi on cfi.CBillItemID=cbi.CBillItemID',
             ]
-        )->append($conditions)->append($orderBy)->toString();
+        )->append(' where 1=1', $conditionString)->append($orderByString)->toString();
         return $this->getDataSet(
             ...\collect([
             'data' => [
@@ -165,17 +172,15 @@ class ZkhbPFM
     }
 
     /**
-     * 查询实际收费列表
+     * 查询实际收费列表条件字符串格式化
      * @param string|int $estateId 项目ID
-     * @param string $chargeType 收费类型
-     * @param string $roomNo 房间号
-     * @param string|null $endDate 结束日期
-     * @param string $filterKey 过滤key
-     * @param array|Collection|null $options Guzzle options
-     * @param \Closure|null $responseHandler
-     * @return array|Collection|null
+     * @param string|null $chargeType 收费类型
+     * @param string|null $roomNo 房间号
+     * @param string|null $endDateBegin 结束日期开始
+     * @param string|null $endDateEnd 结束日期结束
+     * @return string|null
      */
-    public function queryActualChargeBillItemsConditionsFormatter(
+    public function queryActualChargeBillItemListConditionStringFormatter(
         string|int  $estateId = 0,
         string      $chargeType = null,
         string      $roomNo = null,
@@ -183,18 +188,23 @@ class ZkhbPFM
         string|null $endDateEnd = null
     ): string|null
     {
-        $conditions = \str(null);
-        if (Validator::make(['estateId' => $estateId], ['estateId' => 'required|integer|min:1'])->messages()->isEmpty()) {
-            $conditions = $conditions->append(sprintf(" and cml.EstateID=%s", $estateId));
+        $conditionString = \str(null);
+        if (\str($estateId)->isNotEmpty()) {
+            $conditionString = $conditionString->append(sprintf(" and cml.EstateID=%s", $estateId));
         }
-        if (Validator::make(['ItemName' => $chargeType], ['ItemName' => 'required|string|min:1'])->messages()->isEmpty()) {
-            $conditions = $conditions->append(sprintf(" and cbi.ItemName='%s'", $chargeType));
+        if (\str($chargeType)->isNotEmpty()) {
+            $conditionString = $conditionString->append(sprintf(" and cbi.ItemName='%s'", $chargeType));
+        }
+        if (\str($roomNo)->isNotEmpty()) {
+            $conditionString = $conditionString->append(sprintf(" and rd.RmNo='%s'", $roomNo));
         }
 
-        dd($conditions);
-
-
-        $conditions = sprintf(" and (cml.EstateID=%s and cbi.ItemName='%s') order by cfi.ChargeFeeItemID desc", $estateId, $chargeType, $roomNo, $endDateBegin);
-        return $conditions;
+        if (\str($endDateBegin)->isNotEmpty()) {
+            $conditionString = $conditionString->append(sprintf(" and cfi.EDate>='%s'", $endDateBegin));
+        }
+        if (\str($endDateEnd)->isNotEmpty()) {
+            $conditionString = $conditionString->append(sprintf(" and cfi.EDate<='%s'", $endDateEnd));
+        }
+        return $conditionString->toString();
     }
 }
