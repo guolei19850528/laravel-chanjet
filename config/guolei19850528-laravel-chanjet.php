@@ -7,8 +7,12 @@
  */
 return [
     'u8plus' => [
-        'your key' => [
-            'url' => '',
+        'pfm' => [
+            'zkhb' => [
+                'your key' => [
+                    'url' => '',
+                ],
+            ],
         ],
     ]
 ];
